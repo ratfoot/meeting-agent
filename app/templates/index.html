@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Meeting Processor</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        body { font-family: system-ui; max-width: 1000px; margin: 40px auto; padding: 20px; }
+        h1 { margin-bottom: 20px; }
+        select, textarea, button { width: 100%; padding: 10px; margin-bottom: 15px; font-size: 14px; }
+        textarea { height: 200px; }
+        button { background: #000; color: #fff; border: none; cursor: pointer; }
+        button:disabled { background: #666; }
+        #output { background: #f9f9f9; padding: 20px; margin-top: 20px; min-height: 100px; line-height: 1.6; }
+        #output h1, #output h2, #output h3 { margin-top: 1.5em; margin-bottom: 0.5em; }
+        #output h1 { border-bottom: 2px solid #000; padding-bottom: 5px; }
+        #output h2 { border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+        #output table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+        #output th, #output td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        #output th { background: #f0f0f0; }
+        #output ul, #output ol { margin: 0.5em 0; padding-left: 1.5em; }
+        #output code { background: #eee; padding: 2px 5px; border-radius: 3px; }
+        #output pre { background: #eee; padding: 10px; overflow-x: auto; }
+        #output blockquote { border-left: 3px solid #ccc; margin: 1em 0; padding-left: 1em; color: #666; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Meeting Processor</h1>
+
+    <select id="agent">
+        {% for name in agents %}
+        <option value="{{ name }}">{{ name }}</option>
+        {% endfor %}
+    </select>
+
+    <textarea id="transcript" placeholder="Paste transcript here..."></textarea>
+
+    <button onclick="run()">Process</button>
+
+    <div id="output"></div>
+
+    <script>
+    async function run() {
+        const btn = document.querySelector('button');
+        const out = document.getElementById('output');
+
+        btn.disabled = true;
+        btn.textContent = 'Processing...';
+        out.innerHTML = '<p>Processing with Claude...</p>';
+
+        try {
+            const res = await fetch('/process', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    agent: document.getElementById('agent').value,
+                    transcript: document.getElementById('transcript').value
+                })
+            });
+            const data = await res.json();
+            if (data.error) {
+                out.innerHTML = '<p class="error">' + data.error + '</p>';
+            } else {
+                out.innerHTML = marked.parse(data.result);
+            }
+        } catch(e) {
+            out.innerHTML = '<p class="error">Error: ' + e.message + '</p>';
+        }
+
+        btn.disabled = false;
+        btn.textContent = 'Process';
+    }
+    </script>
+</body>
+</html>
