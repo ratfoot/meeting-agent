@@ -22,7 +22,7 @@ def call_llm(prompt):
     if os.environ.get("GEMINI_API_KEY"):
         import google.generativeai as genai
         genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-        model = genai.GenerativeModel("gemini-1.5-pro")
+        model = genai.GenerativeModel("gemini-2.0-flash")
         response = model.generate_content(prompt)
         return response.text
     else:
