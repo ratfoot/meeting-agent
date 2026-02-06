@@ -1,16 +1,10 @@
 #!/usr/bin/env python3
-"""Meeting Processor - uses Claude Code for API access."""
+"""Meeting Processor"""
 
+import os
 import subprocess
 from pathlib import Path
-
-try:
-    from flask import Flask, render_template, request, jsonify
-except ImportError:
-    import os, sys
-    print("Installing flask...")
-    os.system(f"{sys.executable} -m pip install -q flask")
-    from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify
 
 ROOT = Path(__file__).parent
 app = Flask(__name__, template_folder=ROOT / "app" / "templates")
@@ -21,6 +15,25 @@ def get_agents():
     for f in (ROOT / "agents").glob("*.md"):
         agents[f.stem] = f.read_text()
     return agents
+
+
+def call_llm(prompt):
+    """Call Gemini API if key set, otherwise Claude CLI locally."""
+    if os.environ.get("GEMINI_API_KEY"):
+        import google.generativeai as genai
+        genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+        model = genai.GenerativeModel("gemini-1.5-pro")
+        response = model.generate_content(prompt)
+        return response.text
+    else:
+        result = subprocess.run(
+            ["claude", "-p", prompt],
+            capture_output=True,
+            text=True
+        )
+        if result.returncode != 0:
+            raise Exception(result.stderr or "Claude CLI failed")
+        return result.stdout
 
 
 @app.route("/")
@@ -42,21 +55,21 @@ def process():
 
     full_prompt = f"{agent_prompt}\n\nIMPORTANT: Generate ALL outputs automatically. Do not ask for confirmation.\n\n---\n\nINPUT:\n\n{transcript}"
 
-    result = subprocess.run(
-        ["claude", "-p", full_prompt],
-        capture_output=True,
-        text=True
-    )
-
-    if result.returncode != 0:
-        return jsonify({"error": result.stderr or "Claude CLI failed"}), 500
-
-    return jsonify({"result": result.stdout})
+    try:
+        result = call_llm(full_prompt)
+        return jsonify({"result": result})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
-    import webbrowser
-    print(f"Agents: {list(get_agents().keys())}")
-    print("http://localhost:5001")
-    webbrowser.open("http://localhost:5001")
-    app.run(port=5001)
+    port = int(os.environ.get("PORT", 5001))
+
+    if os.environ.get("RAILWAY_ENVIRONMENT"):
+        app.run(host="0.0.0.0", port=port)
+    else:
+        import webbrowser
+        print(f"Agents: {list(get_agents().keys())}")
+        print(f"http://localhost:{port}")
+        webbrowser.open(f"http://localhost:{port}")
+        app.run(port=port)

@@ -2,13 +2,21 @@
 
 Process sales calls and prep with AI agents.
 
-## Run
+## Local
 
 ```bash
 python3 run.py
 ```
 
-Requires [Claude Code](https://claude.ai/code) installed.
+Uses Claude CLI locally. For deploy, set `GEMINI_API_KEY`.
+
+## Deploy (Railway)
+
+```bash
+railway up
+```
+
+Set `GEMINI_API_KEY` in Railway variables. Get key at aistudio.google.com.
 
 ## Agents
 
@@ -19,4 +27,4 @@ Requires [Claude Code](https://claude.ai/code) installed.
 
 ## Add Agents
 
-Drop a `.md` file in `agents/`. It auto-appears in the dropdown.
+Drop a `.md` file in `agents/`. Auto-appears in dropdown.
